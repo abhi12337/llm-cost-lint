@@ -41,3 +41,7 @@ llm_cost_lint = ["data/*.json"]
 testpaths = ["tests"]
 addopts = "-q"
 pythonpath = ["src"]
+
+[project.urls]
+Homepage = "https://github.com/abhi12337/llm-cost-lint"
+Issues = "https://github.com/abhi12337/llm-cost-lint/issues"
