@@ -12,7 +12,7 @@ from __future__ import annotations
 import bisect
 import re
 
-from .calls import Call, FileFacts, History, Text, Val
+from .calls import Call, FileFacts, History, Text, Unparseable, Val
 from .jslex import StrTok, lex, match_close, split_args, strip_span
 
 IMPORT_RE = re.compile(r"""(?:from\s+|require\(\s*|import\(\s*)["']([^"']+)["']""")
@@ -697,4 +697,4 @@ def extract_js(rel: str, text: str) -> FileFacts | None:
     try:
         return JsExtractor(rel, text).run()
     except RecursionError:
-        return None
+        raise Unparseable("too deeply nested to parse") from None

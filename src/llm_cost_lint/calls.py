@@ -83,3 +83,12 @@ class FileFacts:
     retries_disabled: bool = False  # max_retries=0 / maxRetries: 0 on a client
     litellm_retries: bool = False   # litellm.num_retries set globally
     sdk_detected: bool = False
+
+
+class Unparseable(Exception):
+    """A source file that cannot be parsed; `reason` says why. The scanner reports it instead of
+    silently treating the file as clean."""
+
+    def __init__(self, reason: str):
+        super().__init__(reason)
+        self.reason = reason

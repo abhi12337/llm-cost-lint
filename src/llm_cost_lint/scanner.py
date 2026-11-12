@@ -8,6 +8,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .calls import Unparseable
 from .checks import Options, check
 from .findings import Finding
 from .js_scan import extract_js
@@ -31,6 +32,7 @@ class ScanResult:
     js_files: int = 0
     llm_files: list[str] = field(default_factory=list)
     llm_calls: int = 0
+    skipped: list[dict] = field(default_factory=list)   # [{"path": ..., "reason": "syntax error line 3"}]
 
 
 def _is_test_file(name: str) -> bool:
@@ -67,10 +69,13 @@ def scan_file(path: Path, rel: str, res: ScanResult, max_bytes: int, opts: Optio
     res.files_scanned += 1
     if lang == "py":
         res.py_files += 1
-        ff = extract_python(rel, text)
     else:
         res.js_files += 1
-        ff = extract_js(rel, text)
+    try:
+        ff = (extract_python if lang == "py" else extract_js)(rel, text)
+    except Unparseable as e:          # reported (stderr / JSON "skipped"), never silently clean
+        res.skipped.append({"path": rel, "reason": e.reason})
+        return
     if ff is None:
         return
     if any(c.kind in ("gen", "embed") for c in ff.calls):

@@ -52,7 +52,13 @@ llm-cost-lint scan demo-llm-app
 ```
 
 Exit codes: `0` = nothing at or above `--fail-on` (default `medium`), `1` = findings at or above
-it, `2` = usage error. Use `--fail-on critical|high|medium|low|info|never` to tune CI.
+it, `2` = usage error (or, with `--strict`, a file that could not be parsed). Use
+`--fail-on critical|high|medium|low|info|never` to tune CI.
+
+A Python file with a syntax error cannot be checked. It is never treated as clean: each one is
+reported on stderr (`warning: api/app.py: syntax error line 12; file not scanned`), counted in
+the text header and listed under `"skipped"` in the JSON report. Add `--strict` to make such
+files fail the run with exit code `2`.
 
 **Why the default is `medium`:** this tool has no
 critical or high rules, because nothing it finds leaks data. Its `medium` rules are the ones
@@ -70,7 +76,7 @@ is hand-edited).
 `llm-cost-lint scan demo-llm-app/web --brief` (the TypeScript server only):
 
 ```text
-llm-cost-lint 0.1.0
+llm-cost-lint 0.1.1
 Scanned demo-llm-app/web
 2 file(s) (0 Python, 2 JS/TS); 10 LLM call(s) in 2 file(s); model list as of 2026-11-11
 
@@ -216,7 +222,7 @@ LOW      LCL006  Large static prompt sent without prompt caching (Anthropic)
 <summary>The whole demo project: <code>llm-cost-lint scan demo-llm-app --brief</code> (Python + TypeScript)</summary>
 
 ```text
-llm-cost-lint 0.1.0
+llm-cost-lint 0.1.1
 Scanned demo-llm-app
 4 file(s) (2 Python, 2 JS/TS); 28 LLM call(s) in 4 file(s); model list as of 2026-11-11
 
@@ -470,7 +476,7 @@ work with caps, timeouts, a concurrency limit, a trimmed history, prompt caching
 embeddings, current models and error handling) produce no findings:
 
 ```text
-llm-cost-lint 0.1.0
+llm-cost-lint 0.1.1
 Scanned demo-llm-app/api/app_fixed.py, demo-llm-app/web/src/server_fixed.ts
 2 file(s) (1 Python, 1 JS/TS); 14 LLM call(s) in 2 file(s); model list as of 2026-11-11
 
@@ -622,7 +628,7 @@ an artifact.
 ```json
 {
   "tool": "llm-cost-lint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "targets": [
     "/abs/path/demo-llm-app"
   ],
@@ -637,6 +643,7 @@ an artifact.
   ],
   "llm_calls": 28,
   "model_data_as_of": "2026-11-11",
+  "skipped": [],
   "exit_code": 1,
   "summary": {
     "critical": 0,
@@ -681,6 +688,7 @@ llm-cost-lint scan [PATH ...]
   --fail-on SEVERITY          exit 1 at or above this severity (default medium; or never)
   --min-severity SEVERITY     hide findings below this severity
   --brief                     omit the why / fix text
+  --strict                    exit 2 if any file could not be parsed (default: warn on stderr only)
   --no-color                  disable ANSI colours (also honours NO_COLOR)
 llm-cost-lint rules
 ```

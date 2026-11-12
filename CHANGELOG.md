@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-12
+
+### Fixed
+
+- A Python file with a syntax error was skipped silently, so a scan of broken code printed "No
+  findings" and exited 0. Every file that cannot be parsed is now reported: a
+  `warning: <path>: syntax error line N; file not scanned` line on stderr, a count in the text
+  header, and a `"skipped": [{"path": ..., "reason": ...}]` list in the JSON report. The exit
+  code still depends on findings only, unless `--strict` is given.
+
+### Added
+
+- `--strict`: exit `2` when any file could not be parsed.
+
 ## [0.1.0] - 2026-11-11
 
 First release.

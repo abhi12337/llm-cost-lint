@@ -10,7 +10,7 @@ from __future__ import annotations
 import ast
 import re
 
-from .calls import Call, FileFacts, History, Text, Val
+from .calls import Call, FileFacts, History, Text, Unparseable, Val
 
 SDK_IMPORT_RE = re.compile(r"^\s*(?:from|import)\s+(openai|anthropic|google\.genai|google\s+import\s+genai|litellm|"
                            r"langchain[\w.]*)", re.M)
@@ -722,8 +722,17 @@ def _provider_of(model: str) -> str | None:
     return None
 
 
+def parse_failure(exc: BaseException) -> str:
+    if isinstance(exc, SyntaxError):
+        return f"syntax error line {exc.lineno}" if exc.lineno else "syntax error"
+    if isinstance(exc, RecursionError):
+        return "too deeply nested to parse"
+    return f"could not be parsed ({exc})"
+
+
 def extract_python(rel: str, text: str) -> FileFacts | None:
+    """Facts for one file. Raises Unparseable when the file is not valid Python."""
     try:
         return PyExtractor(rel, text).run()
-    except (SyntaxError, ValueError, RecursionError):
-        return None
+    except (SyntaxError, ValueError, RecursionError) as e:
+        raise Unparseable(parse_failure(e)) from None

@@ -62,6 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="hide findings below this severity (default: info = show all)")
     s.add_argument("--no-color", action="store_true", help="disable ANSI colours")
     s.add_argument("--brief", action="store_true", help="omit the why/fix text")
+    s.add_argument("--strict", action="store_true",
+                   help="exit 2 if any file could not be parsed (by default such files are reported as warnings "
+                        "on stderr and the exit code depends on findings only)")
 
     sub.add_parser("rules", help="list every rule with why it matters and how to fix it")
     return parser
@@ -92,9 +95,14 @@ def cmd_scan(args) -> int:
             for f in r.findings:
                 f.file = f"{prefix}/{f.file}"
             r.llm_files = [f"{prefix}/{x}" for x in r.llm_files]
+            for x in r.skipped:
+                x["path"] = f"{prefix}/{x['path']}"
     disabled = {r.upper() for r in args.disable}
     findings = [f for r in results for f in r.findings if f.rule_id not in disabled]
-    exit_code = _exit_code(findings, args.fail_on)
+    skipped = [x for r in results for x in r.skipped]
+    for x in skipped:
+        print(f"warning: {x['path']}: {x['reason']}; file not scanned", file=sys.stderr)
+    exit_code = EXIT_ERROR if args.strict and skipped else _exit_code(findings, args.fail_on)
     shown = _filter_min(findings, args.min_severity)
     files = sum(r.files_scanned for r in results)
     py = sum(r.py_files for r in results)
@@ -104,12 +112,15 @@ def cmd_scan(args) -> int:
     if args.json:
         sys.stdout.write(render_json(shown, meta={
             "targets": [r.root for r in results], "files_scanned": files, "python_files": py, "js_files": js,
-            "llm_files": llm_files, "llm_calls": calls, "model_data_as_of": models.as_of(), "exit_code": exit_code,
+            "llm_files": llm_files, "llm_calls": calls, "model_data_as_of": models.as_of(), "skipped": skipped,
+            "exit_code": exit_code,
         }))
     else:
         header = [f"Scanned {', '.join(paths)}",
                   f"{files} file(s) ({py} Python, {js} JS/TS); {calls} LLM call(s) in {len(llm_files)} file(s); "
                   f"model list as of {models.as_of()}"]
+        if skipped:
+            header.append(f"{len(skipped)} file(s) could not be parsed and were not scanned (see warnings)")
         if not llm_files:
             header.append("No LLM SDK calls found (OpenAI, Anthropic, Google GenAI, Vercel AI SDK, LangChain, "
                           "LiteLLM).")

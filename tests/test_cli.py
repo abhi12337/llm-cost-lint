@@ -193,3 +193,36 @@ def test_retired_lookup(model, retired):
 ])
 def test_top_tier_lookup(model, top):
     assert (models.top_tier(model) is not None) is top
+
+
+# ---------------------------------------------------------------- unparseable files (0.1.1)
+BROKEN = "from openai import OpenAI\nclient = OpenAI()\ndef ask(q:\n    return client.chat.completions.create(model='m')\n"
+
+
+def test_syntax_error_is_warned_not_silently_clean(capsys, tmp_path):
+    (tmp_path / "broken.py").write_text(BROKEN)
+    code, out, err = run(capsys, "scan", str(tmp_path), "--no-color")
+    assert code == 0                                  # default: exit code still depends on findings only
+    assert "warning: broken.py: syntax error line 3; file not scanned" in err
+    assert "1 file(s) could not be parsed" in out
+    code, out, err = run(capsys, "scan", str(tmp_path), "--json")
+    doc = json.loads(out)
+    assert doc["skipped"] == [{"path": "broken.py", "reason": "syntax error line 3"}] and doc["exit_code"] == 0
+    assert "broken.py" in err
+
+
+def test_strict_makes_parse_failures_exit_2(capsys, tmp_path):
+    (tmp_path / "broken.py").write_text(BROKEN)
+    code, out, _ = run(capsys, "scan", str(tmp_path), "--strict", "--json")
+    assert code == 2 and json.loads(out)["exit_code"] == 2
+    (tmp_path / "broken.py").write_text(BROKEN.replace("def ask(q:", "def ask(q):"))
+    code, out, err = run(capsys, "scan", str(tmp_path), "--strict", "--json")
+    assert code == 1 and json.loads(out)["skipped"] == [] and err == ""     # LCL001 (medium) as usual
+
+
+def test_skipped_paths_are_prefixed_with_multiple_targets(capsys, tmp_path):
+    (tmp_path / "a").mkdir()
+    (tmp_path / "b").mkdir()
+    (tmp_path / "b" / "x.py").write_text("def (:\n")
+    code, out, _ = run(capsys, "scan", str(tmp_path / "a"), str(tmp_path / "b"), "--json")
+    assert [x["path"].endswith("b/x.py") for x in json.loads(out)["skipped"]] == [True]

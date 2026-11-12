@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-cost-lint"
-version = "0.1.0"
+version = "0.1.1"
 description = "Static lint for LLM API calls that waste money or break in production: missing output caps and timeouts, unbounded fan-out and chat history, uncached prompts, retired models (OpenAI, Anthropic, Google GenAI, Vercel AI SDK, LangChain, LiteLLM)."
 readme = "README.md"
 requires-python = ">=3.10"
