@@ -33,6 +33,7 @@ the internet. CI-friendly exit codes.
 ## Quick start
 
 ```bash
+pipx install git+https://github.com/abhi12337/llm-cost-lint   # straight from GitHub
 pipx install .                          # from a clone of this repo (or: pip install .)
 
 llm-cost-lint scan                      # current folder
